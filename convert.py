@@ -1,6 +1,7 @@
 import json
-import os
 import subprocess
+import sys
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 from automata.fa.nfa import NFA
@@ -16,32 +17,37 @@ class Convertor(Logger):
     """
     __name__ = "Convertor"
 
-    def __init__(self, nfa_path: str):
+    def __init__(self):
         """ Initialize the Convertor """
         super(Convertor, self).__init__()
-        self.module_name = "Convertor"
-        self.nfa_path: str = nfa_path
-        self.json_path: str = "./converted_json.json"  # This path is fixed by tool PutFlap
-        self.putflap_path: str = "../tools/putflap.jar"
+        self.json_path: Path = Path("./converted_json.json")  # This path is fixed by tool PutFlap
+        self.putflap_path: Path = Path('./tools/putflap.jar')
 
-    def get_json_from_jff(self) -> Tuple[bool, str]:
+    def get_json_from_jff(self, nfa_path: Path) -> Tuple[bool, str]:
         """ Use tool PutFlap to convert a .jff file to a .json file"""
-        command: str = f"java -jar {self.putflap_path} convert -t json {self.nfa_path}"
+
+        if not self.putflap_path.exists():
+            sys.exit(f"{self.putflap_path} does not exist!")
+
+        if not nfa_path.exists():
+            return False, f"{nfa_path} does not exist!"
+
+        command: str = f"java -jar {self.putflap_path} convert -t json {nfa_path}"
 
         self.info(f"Executing \"{command}\"...")
         p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
 
         if p.poll() == 0:
-            self.info(f"Convert {self.nfa_path} to .json successfully!")
+            self.info(f"Convert {nfa_path} to .json successfully!")
             return True, "Convert .jff to .json successfully!"
         else:
-            self.error(f"Failed to convert {self.nfa_path} to .json.")
-            return False, f"Failed to convert {self.nfa_path} to .json."
+            self.error(f"Failed to convert {nfa_path} to .json.")
+            return False, f"Failed to convert {nfa_path} to .json."
 
     def get_dfa_from_json(self) -> DDroidDFA:
         """ Get the DFA from the .json file converted from .jff """
-        with open(self.json_path, "r", encoding="utf-8") as automata_json_file:
+        with self.json_path.open() as automata_json_file:
             automata_info = json.load(automata_json_file)
             raw_states: List = automata_info["conversions"][0]["result"]["states"]
             raw_transitions: List = automata_info["conversions"][0]["result"]["transitions"]
@@ -89,11 +95,5 @@ class Convertor(Logger):
         ))
 
         self.info("Build a DFA from .json successfully.")
-        self.delete_converted_json()
+        self.json_path.unlink()
         return dfa
-
-    def delete_converted_json(self) -> None:
-        """ Delete the generated JSON file """
-        os.remove(self.json_path)
-        self.info(f"Delete {self.json_path} successfully.")
-        return

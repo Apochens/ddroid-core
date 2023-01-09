@@ -2,6 +2,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from convert import Convertor
@@ -32,6 +33,7 @@ class AnalysisCore(Logger):
         self.__app_name: str = ""
         self.__bug_id: str = ""
         self.__reason: str = ""
+        self.__convertor: Convertor = Convertor()
         self.__dfa: Optional[DDroidDFA] = None
 
         self.__crash_time: List[timedelta] = []
@@ -98,10 +100,9 @@ class AnalysisCore(Logger):
 
     def __initialize_dfa(self, event_info: Dict[str, Dict[str, str]], event_warning: Dict[str, str]) -> DDroidDFA:
         """ Initialize the DDroid DFA for analysis """
-        convertor: Convertor = Convertor(self.__nfa_path)
-        success, msg = convertor.get_json_from_jff()
+        success, msg = self.__convertor.get_json_from_jff(Path(self.__nfa_path))
         if success:
-            dfa = convertor.get_dfa_from_json()
+            dfa = self.__convertor.get_dfa_from_json()
             dfa.init(event_info, event_warning)
             return dfa
         else:

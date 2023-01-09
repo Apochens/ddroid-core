@@ -21,7 +21,7 @@ class Convertor(Logger):
         """ Initialize the Convertor """
         super(Convertor, self).__init__()
         self.json_path: Path = Path("./converted_json.json")  # This path is fixed by tool PutFlap
-        self.putflap_path: Path = Path('./tools/putflap.jar')
+        self.putflap_path: Path = Path('../tools/putflap.jar')
 
     def get_json_from_jff(self, nfa_path: Path) -> Tuple[bool, str]:
         """ Use tool PutFlap to convert a .jff file to a .json file"""

@@ -22,12 +22,12 @@ class AnalysisCore(Logger):
     def __init__(self, first_init: bool = False):
         if first_init:
             super().__init__()
-        self.__target_dir: str = ""
+        self.__target_dir: Path = Path()
         # File paths
-        self.__configuration_path: str = ""
-        self.__nfa_path: str = ""
-        self.__logcat_path: str = ""
-        self.__time_record_path: str = ""
+        self.__configuration_path: Path = Path()
+        self.__nfa_path: Path = Path()
+        self.__logcat_path: Path = Path()
+        self.__time_record_path: Path = Path()
 
         self.__tool_name: str = ""
         self.__app_name: str = ""
@@ -42,9 +42,7 @@ class AnalysisCore(Logger):
     def set_target_dir(self, _target_dir: str) -> None:
         """ Set the target directory of the analysis """
         self.__init__()
-        if _target_dir.endswith("/"):
-            _target_dir = _target_dir[:-1]
-        self.__target_dir = _target_dir
+        self.__target_dir = Path(_target_dir)
         self.__initialize()
         self.info(f"Finishing initialization for {_target_dir}")
         return
@@ -70,26 +68,26 @@ class AnalysisCore(Logger):
         bug_id: str = base_dir[second_pos[0] + 1: third_pos[0]]
         tool_name: str = get_name(base_dir[third_pos[1]: forth_pos[0]].lower())
 
-        config_path = os.path.join("..", app_name, f"configuration-{bug_id}.json")
+        config_path = Path(os.path.join("..", app_name, f"configuration-{bug_id}.json"))
         if self.__check_file_exists(config_path):
             self.__configuration_path = config_path
 
-        nfa_path = os.path.join("..", app_name, f"{bug_id[1:]}-NFA.jff")
+        nfa_path = Path(os.path.join("..", app_name, f"{bug_id[1:]}-NFA.jff"))
         if self.__check_file_exists(nfa_path):
             self.__nfa_path = nfa_path
 
-        logcat_path = os.path.join(self.__target_dir, "logcat.log")
+        logcat_path = Path(os.path.join(self.__target_dir, "logcat.log"))
         if self.__check_file_exists(logcat_path):
             self.__logcat_path = logcat_path
 
-        time_record_path = os.path.join(self.__target_dir, f"{tool_name}_testing_time_on_emulator.txt")
+        time_record_path = Path(os.path.join(self.__target_dir, f"{tool_name}_testing_time_on_emulator.txt"))
         if self.__check_file_exists(time_record_path):
             self.__time_record_path = time_record_path
 
         return base_dir, tool_name
 
     def __read_configuration(self) -> Tuple[str, str, Dict, Dict, str]:
-        with open(self.__configuration_path, "r", encoding="utf-8") as f:
+        with self.__configuration_path.open() as f:
             config = json.load(f)
             app_name: str = str(config["app_name"])
             bug_id: str = str(config["bug_id"])
@@ -115,7 +113,7 @@ class AnalysisCore(Logger):
         time_format: str = get_time_format(self.__tool_name)
         start_time: Optional[datetime] = None
         end_time: Optional[datetime] = None
-        with open(self.__time_record_path, "r", encoding="utf-8") as time_file:
+        with self.__time_record_path.open() as time_file:
             try:
                 start_time = datetime.strptime(time_file.readline().split("\n")[0], time_format)
                 year = f"{str(start_time.year)}-"
@@ -128,7 +126,7 @@ class AnalysisCore(Logger):
                 # raise EndTimeValueError(f"The time value is incorrect in {self.__time_record_path}")
 
         now_time: Optional[datetime] = None
-        with open(self.__logcat_path, "r", encoding="utf-8") as log:
+        with self.__logcat_path.open() as log:
             for line in log:
 
                 if not line.startswith("---"):
@@ -160,9 +158,9 @@ class AnalysisCore(Logger):
                               elapsed_time=end_time - start_time, crash_time=self.__crash_time,
                               metrics=self.__dfa.metrics())
 
-    def __check_file_exists(self, file_path: str) -> bool:
+    def __check_file_exists(self, file_path: Path) -> bool:
         """ Check existence of the given file """
-        if os.path.exists(file_path):
+        if file_path.exists():
             self.info(f"Using file {file_path}")
             return True
         else:
@@ -220,7 +218,8 @@ class Analyzer(Logger):
                 result: AnalysisResult = self.__analysis_core.run()
                 self.__displayer.display(result)
                 analysis_result_summary.add_result(result)
-            except RuntimeError:
+            except RuntimeError as e:
+                self.error(str(e))
                 self.__error_list.append(target)
         self.__displayer.display(analysis_result_summary)
         # Print summary

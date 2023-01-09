@@ -1,31 +1,5 @@
-import os
 import re
 from typing import Dict, Tuple, Optional, Match
-
-
-# Other functions
-
-def file_exists(file_path: str) -> bool:
-    """ Check whether the given file exists """
-    return os.path.exists(file_path)
-
-
-def delete_file(file_path: str) -> None:
-    """ Delete the file according to the given path """
-    return os.remove(file_path)
-
-
-def check_or_create_dir(dir_name: str):
-    if os.path.exists(dir_name) and os.path.isdir(dir_name):
-        return
-    os.mkdir(dir_name)
-
-
-def create_html(html_name: str, content: str):
-    """ Create a html file """
-    with open(html_name, "x", encoding="utf-8") as file:
-        file.write(content)
-    return
 
 
 def get_time_format(tool_name: str) -> str:

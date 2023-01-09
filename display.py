@@ -1,10 +1,10 @@
 import os
-from typing import Union, Tuple
+from pathlib import Path
+from typing import Union, Tuple, Optional
 
 from jinja2 import Environment, FileSystemLoader
 
 from dtypes import AnalysisResult, AnalysisResultSummary, AnalysisBasicInfo, Logger
-from utils import check_or_create_dir, create_html
 
 
 class TerminalPrinter(Logger):
@@ -27,24 +27,26 @@ class HTMLGenerator(Logger):
     def __init__(self, timestamp: str):
         super().__init__()
         self.__timestamp: str = timestamp
-        self.__result_template_path: str = "resulttmpl.html"
-        self.__summary_template_path: str = "summarytmpl.html"
-        self.__result_directory: str = os.path.join("..", "ddroid-result")
+        self.__result_template: str = "resulttmpl.html"
+        self.__summary_template: str = "summarytmpl.html"
+        self.__result_directory: Path = Path(os.path.join("..", "ddroid-result"))
         # Use the timestamp as the output directory name
-        self.__current_result_directory: str = os.path.join(self.__result_directory, self.__timestamp)
+        self.__current_result_directory: Path = self.__result_directory / self.__timestamp  # os.path.join(self.__result_directory, self.__timestamp)
         self.__template_env = Environment(loader=FileSystemLoader("./templates/"))
         return
 
     def __check_or_create_dirs(self) -> None:
-        check_or_create_dir(self.__result_directory)
-        check_or_create_dir(self.__current_result_directory)
+        if not self.__result_directory.exists() or not self.__result_directory.is_dir():
+            self.__result_directory.mkdir()
+        if not self.__current_result_directory.exists() or not self.__current_result_directory.is_dir():
+            self.__current_result_directory.mkdir()
         return
 
-    def __analysis_result_to_html(self, data: AnalysisResult) -> Tuple[str, str]:
+    def __analysis_result_to_html(self, data: AnalysisResult) -> Tuple[Path, str]:
         """ Generate a single html file from a AnalysisResult"""
         self.__check_or_create_dirs()
         basic_info: AnalysisBasicInfo = data.basic_info()
-        template = self.__template_env.get_template(self.__result_template_path)
+        template = self.__template_env.get_template(self.__result_template)
         title = repr(data)
 
         events = data.events()
@@ -56,7 +58,7 @@ class HTMLGenerator(Logger):
         event_pair_coverage = [sum(1 for event_pair in event_pairs if event_pair.count() > 0)]
         event_pair_coverage.append(len(event_pairs) - event_pair_coverage[0])
 
-        html_path = os.path.join(self.__current_result_directory, f"{basic_info.dir_name.replace('#', '')}.html")
+        html_path = self.__current_result_directory / f"{basic_info.dir_name.replace('#', '')}.html"
         content: str = template.render(
             title=title,
             timestamp=self.__timestamp,
@@ -69,13 +71,13 @@ class HTMLGenerator(Logger):
         )
         return html_path, content
 
-    def __analysis_result_summary_to_html(self, data: AnalysisResultSummary) -> Tuple[str, str]:
+    def __analysis_result_summary_to_html(self, data: AnalysisResultSummary) -> Tuple[Path, str]:
         """ Generate the summary html from AnalysisResultSummary"""
         self.__check_or_create_dirs()
-        template = self.__template_env.get_template(self.__summary_template_path)
+        template = self.__template_env.get_template(self.__summary_template)
         title = repr(data)
 
-        html_path = os.path.join(self.__current_result_directory, "main.html")
+        html_path = self.__current_result_directory / "main.html"
         content = template.render(
             title=title,
             timestamp=self.__timestamp,
@@ -83,19 +85,22 @@ class HTMLGenerator(Logger):
         )
         return html_path, content
 
-    def generate(self, data: Union[AnalysisResult, AnalysisResultSummary]) -> str:
+    def generate(self, data: Union[AnalysisResult, AnalysisResultSummary]) -> Path:
         """ Generate the html """
         self.info(f"Generating result report of {repr(data)}")
-        file_name: str = ""
-        file_content: str = ""
+        file_name: Optional[Path] = None
+        file_content: Optional[str] = None
+
         if isinstance(data, AnalysisResult):
             file_name, file_content = self.__analysis_result_to_html(data)
             data.html_file_name = os.path.basename(file_name)
         if isinstance(data, AnalysisResultSummary):
             file_name, file_content = self.__analysis_result_summary_to_html(data)
-        if file_name == "" or file_content == "":
-            raise Exception
-        create_html(file_name, file_content)
+
+        if file_name is None or file_content is None:
+            raise RuntimeError(f"Error in generating result report of {repr(data)}")
+
+        file_name.write_text(file_content)
         return file_name
 
 

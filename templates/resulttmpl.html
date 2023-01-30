@@ -38,11 +38,14 @@
         tooltip: { trigger: 'axis', axisPointer: { type: "shadow" } },
         legend: { right: 50, selectedMode: false },
         xAxis: { type: "category", data: [{%- for event in events -%} {{ event.id() }}{{","}} {%- endfor -%}] },
-        yAxis: [{ type: "value", name: "Number of triggers" }, { type: "value", name: "Elapsed time/s", min: 0 }],
+        yAxis: [
+            { type: "value", name: "Number of triggers", nameLocation: "center", nameGap: 30 },
+            { type: "value", name: "Elapsed time/s", nameLocation: "center", nameGap: 50, min: 0 }
+        ],
         series: [
-            { name: "Total number of triggers", type: "bar", data: [{%- for event in events -%} {{ event.count() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' } },
+            { name: "Executed times", type: "bar", data: [{%- for event in events -%} {{ event.count() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' } },
             // { name: "Warnings", type: "bar", data: [{%- for event in events -%} {{ event.warning_count() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' } },
-            { name: "First trigger time", type: "scatter", data: [{%- for event in events -%} {{ event.first_trigger_seconds() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' }, yAxisIndex: 1 },
+            { name: "Time of first execution", type: "scatter", data: [{%- for event in events -%} {{ event.first_trigger_seconds() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' }, yAxisIndex: 1 },
             // { name: "WFTT", type: "line", data: [{%- for event in events -%} {{ event.first_trigger_warning_seconds() }}{{","}} {%- endfor -%}], emphasis: { focus: 'series' }, yAxisIndex: 1 },
         ]
     };
@@ -94,7 +97,7 @@
       title: { text: 'Distance Statistics' },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: "{c} times at distance {b}" },
       xAxis: { type: 'value', name: "Number of arrivals", nameLocation: "center", nameTextStyle: {padding: 10} },
-      yAxis: { type: 'category', name: "Reached distance", data: {{ distances.reached_distances() }} },
+      yAxis: { type: 'category', name: "Reached distance", nameLocation: "center", nameGap: 25, data: {{ distances.reached_distances() }} },
       series: [{ type: 'bar', data: {{ distances.reached_distances_count() }}, itemStyle: { color: "green" } }]
     };
     chartDistances.setOption(chartDistancesOption);
